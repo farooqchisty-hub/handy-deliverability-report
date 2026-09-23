@@ -79,6 +79,11 @@ ol,ul{padding-left:20px;margin:8px 0} li{margin:4px 0}
 details summary{cursor:pointer;font-size:15px;color:var(--ink)}
 details[open] summary{margin-bottom:8px}
 code{font:500 13px "JetBrains Mono",monospace;background:var(--line);padding:1px 5px;border-radius:4px}
+.cmp tr.jev td{background:var(--accent-soft)}
+.cmp tr.jev td:first-child{box-shadow:inset 4px 0 0 var(--accent)}
+.cmp tr.grp td{font:600 12px/1 "JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:18px 8px 8px;border-bottom:1px solid var(--line)}
+.cmp tr.est td{color:var(--muted)}
+.t-est{background:transparent;color:var(--muted);border:1px dashed var(--node-line)}
 footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
 @media (max-width:560px){.bar{grid-template-columns:1fr 56px}.bar .track{grid-column:1 / -1;order:3}}
 </style>
@@ -314,20 +319,23 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
   </div>
 </div>
 
-<h3>Same job, other ways</h3>
-<div class="card scroll">
+<h3>JEV compared with the alternatives</h3>
+<p>We ran JEV. The two no-model methods were measured on the same data. The Claude rows were <b>not run</b>: they're cost estimates for doing the same job with an LLM instead of JEV.</p>
+<div class="card scroll cmp">
 <table>
-<thead><tr><th>Method</th><th class="num">Accuracy</th><th class="num">Cost per run</th><th>Time</th></tr></thead>
+<thead><tr><th>Method</th><th>Status</th><th class="num">Accuracy</th><th class="num">Cost per run</th><th class="num">Batched</th><th>Time</th></tr></thead>
 <tbody>
-<tr><td><b>JEV</b></td><td class="num">0.54</td><td class="num">$2.31</td><td>~3 min</td></tr>
-<tr><td>Email-history groups (what we used)</td><td class="num">0.62</td><td class="num">$0</td><td>Analyst time</td></tr>
-<tr><td>Simple statistical model</td><td class="num">0.65</td><td class="num">$0</td><td>Analyst time</td></tr>
-<tr><td>Claude Haiku 4.5</td><td class="num">not run</td><td class="num">~$24 ($12 batched)</td><td>Minutes to hours</td></tr>
-<tr><td>Claude Sonnet 5</td><td class="num">not run</td><td class="num">~$47 ($24 batched)</td><td>Minutes to hours</td></tr>
-<tr><td>Claude Opus 5.5</td><td class="num">not run</td><td class="num">~$94+ ($47 batched)</td><td>Minutes to hours</td></tr>
+<tr class="grp"><td colspan="6">What we used</td></tr>
+<tr class="jev"><td><b>JEV</b></td><td><span class="tag t-send">Ran</span></td><td class="num">0.54</td><td class="num"><b>$2.31</b></td><td class="num">n/a</td><td>~3 min</td></tr>
+<tr><td>Email-history groups (sets the tiers)</td><td><span class="tag t-small">Measured</span></td><td class="num">0.62</td><td class="num">$0</td><td class="num">n/a</td><td>Analyst time</td></tr>
+<tr><td>Simple statistical model (benchmark)</td><td><span class="tag t-small">Measured</span></td><td class="num">0.65</td><td class="num">$0</td><td class="num">n/a</td><td>Analyst time</td></tr>
+<tr class="grp"><td colspan="6">If we'd used an LLM instead of JEV</td></tr>
+<tr class="est"><td>Claude Haiku 4.5</td><td><span class="tag t-est">Estimate</span></td><td class="num">not run</td><td class="num">~$24</td><td class="num">~$12</td><td>Minutes to hours</td></tr>
+<tr class="est"><td>Claude Sonnet 5</td><td><span class="tag t-est">Estimate</span></td><td class="num">not run</td><td class="num">~$47</td><td class="num">~$24</td><td>Minutes to hours</td></tr>
+<tr class="est"><td>Claude Opus 5.5</td><td><span class="tag t-est">Estimate</span></td><td class="num">not run</td><td class="num">~$94+</td><td class="num">~$47+</td><td>Minutes to hours</td></tr>
 </tbody>
 </table>
-<p class="small">Accuracy runs from 0.5 (coin flip) to 1.0 (perfect), all measured on the same 11,276 contacts and 629 real unsubscribes. LLM costs are estimated from measured token counts at list prices for 130,045 rows. We needed two runs, so double them.</p>
+<p class="small">Accuracy runs from 0.5 (coin flip) to 1.0 (perfect), measured on the same 11,276 contacts and 629 real unsubscribes. LLM costs are estimated for the same 130,045 rows from measured token counts at list prices, 50 contacts per call; "Batched" is the Batch API at half price. We ran JEV twice (the second run after fixing a data leak), so the job cost $4.62 in JEV, against $24 to $188 for the LLM options.</p>
 </div>
 <div class="callout info"><b>Bottom line:</b> JEV is 5x to 40x cheaper than an LLM for reading a whole list, and fast enough to re-run after every fix. It just can't find signal that isn't there.</div>
 
