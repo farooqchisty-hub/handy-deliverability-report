@@ -76,6 +76,9 @@ svg .t2{font-size:12px;fill:var(--muted)}
 .two{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 ol,ul{padding-left:20px;margin:8px 0} li{margin:4px 0}
 .small{font-size:13px;color:var(--muted)}
+details summary{cursor:pointer;font-size:15px;color:var(--ink)}
+details[open] summary{margin-bottom:8px}
+code{font:500 13px "JetBrains Mono",monospace;background:var(--line);padding:1px 5px;border-radius:4px}
 footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
 @media (max-width:560px){.bar{grid-template-columns:1fr 56px}.bar .track{grid-column:1 / -1;order:3}}
 </style>
@@ -84,101 +87,89 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
 <div class="wrap">
 
 <header>
-  <div class="kicker">Managed services · Deliverability · 23 Sep 2026</div>
-  <h1>Who to stop mailing on the Handy account, and why</h1>
-  <p class="lede">We read every contact in the Brevo account, ran them all through JEV, and checked every result against the people who actually unsubscribed. 4,871 of the 118,769 subscribed contacts are safe to mail now, another 68,049 can be reached through a paced two-wave ramp, and 45,849 should be excluded.</p>
-  <p class="meta">Source: read-only Brevo API pull of 153,608 contacts, their per-contact email history (June to September 2026), 62 lists and 31 segments. No emails were sent and nothing in the account was changed. This page shows totals only, no contact data.</p>
+  <div class="kicker">Managed services · Deliverability · Sep 2026</div>
+  <h1>Handy: who to mail, who to drop</h1>
+  <p class="lede">We checked all 118,769 subscribed contacts against who actually unsubscribed. About 5k are safe today, 68k can be brought back slowly, and 46k should go.</p>
+  <p class="meta">Read-only pull from the Brevo account: 153,608 contacts, their email history since June, every list and segment. Nothing was sent. The only change in the account is one new field, <code>UNSUB_RISK_TIER</code>. This page shows totals only.</p>
 </header>
 
 <div class="grid kpis">
-  <div class="kpi"><div class="v">118,769</div><div class="l">subscribed contacts reviewed</div></div>
-  <div class="kpi good"><div class="v">4,871</div><div class="l">safe to mail now (SEND, SEND-SMALL, HOLD)</div></div>
-  <div class="kpi"><div class="v">68,049</div><div class="l">reachable through the ramp (waves 1 and 2)</div></div>
-  <div class="kpi bad"><div class="v">45,849</div><div class="l">on the exclude list</div></div>
+  <div class="kpi"><div class="v">118,769</div><div class="l">subscribed contacts checked</div></div>
+  <div class="kpi good"><div class="v">4,871</div><div class="l">safe to mail now</div></div>
+  <div class="kpi"><div class="v">68,049</div><div class="l">reachable through a slow ramp</div></div>
+  <div class="kpi bad"><div class="v">45,849</div><div class="l">don't mail</div></div>
 </div>
 
-<h2>1. The answer</h2>
-<p>We sorted contacts by what they have actually done with Brevo emails, then split the two held-back pools (never mailed from Brevo, and WooCommerce buyers who never opted in) by the signals that held up on real first emails (section 3). The rates below are measured: we grouped everyone mailed since 1 Aug by how their history looked on 1 Aug, then counted who unsubscribed or complained afterwards (11,276 contacts, 629 unsubscribes).</p>
+<h2>The short version</h2>
+<div class="card">
+<ul>
+  <li>The suspensions started when we began mailing the old SendGrid list. Those first emails lose 3.6% of people to unsubscribes.</li>
+  <li>People get safer with every email they stay for. By the fifth email it's 0.5%.</li>
+  <li>So the fix is pacing, not a smarter model: mix a small slice of new people into each campaign.</li>
+  <li>JEV scored every contact in minutes for about $2. It couldn't predict who would unsubscribe, and neither could anything else.</li>
+  <li>Every contact now has its tier in Brevo, so each group is one segment away.</li>
+</ul>
+</div>
+
+<h2>The tiers</h2>
 <div class="card scroll">
 <table>
-<thead><tr><th>Tier</th><th class="num">Contacts</th><th>Who</th><th class="num">Unsubs per email</th><th>What to do</th></tr></thead>
+<thead><tr><th>Tier</th><th class="num">Contacts</th><th>Who</th><th class="num">Unsubs</th><th>What to do</th></tr></thead>
 <tbody>
-<tr><td><span class="tag t-send">SEND</span></td><td class="num">748</td><td>Clicked a Brevo email in the last 90 days</td><td class="num">0.31%</td><td>Mail normally</td></tr>
-<tr><td><span class="tag t-small">SEND-SMALL</span></td><td class="num">1,749</td><td>Opened, never clicked</td><td class="num">1.11%</td><td>Batches of 500 or fewer; stop a batch over 0.5%</td></tr>
-<tr><td><span class="tag t-hold">HOLD</span></td><td class="num">2,374</td><td>Mailed from Brevo, never opened</td><td class="num">0.80%</td><td>One last-chance email, then drop</td></tr>
-<tr><td><span class="tag t-small">RAMP-WAVE-1</span></td><td class="num">10,612</td><td>Never mailed from Brevo or no-opt-in buyers, with 3+ orders or a Microsoft mailbox</td><td class="num">1.7% (1st email)</td><td>Add first, in two halves</td></tr>
-<tr><td><span class="tag t-hold">RAMP-WAVE-2</span></td><td class="num">57,437</td><td>The rest of both held-back pools</td><td class="num">4.3% (1st email)</td><td>Add in slices sized to keep each campaign at 1% or below</td></tr>
-<tr><td><span class="tag t-ex">EXCLUDE</span></td><td class="num">44,081</td><td>No orders and joined under a year ago, or a small or unusual email domain</td><td class="num">6.4% (1st email)</td><td>Don't mail</td></tr>
-<tr><td><span class="tag t-ex">SUPPRESS</span></td><td class="num">1,470</td><td>Unsubscribed before (1,003) or on the ZeroBounce "Don't send" list (467)</td><td class="num">rule</td><td>Never mail</td></tr>
-<tr><td><span class="tag t-ex">NEW-EXCLUDE</span></td><td class="num">298</td><td>Added in the last 30 days, never mailed</td><td class="num">rule</td><td>Leave out of the next campaign</td></tr>
+<tr><td><span class="tag t-send">SEND</span></td><td class="num">748</td><td>Clicked in the last 90 days</td><td class="num">0.3%</td><td>Mail normally</td></tr>
+<tr><td><span class="tag t-small">SEND-SMALL</span></td><td class="num">1,749</td><td>Opened, never clicked</td><td class="num">1.1%</td><td>Batches of 500 or fewer</td></tr>
+<tr><td><span class="tag t-hold">HOLD</span></td><td class="num">2,374</td><td>Mailed, never opened</td><td class="num">0.8%</td><td>One last email, then drop</td></tr>
+<tr><td><span class="tag t-small">RAMP-WAVE-1</span></td><td class="num">10,612</td><td>Never mailed, but 3+ orders or a Hotmail/Outlook address</td><td class="num">1.7%</td><td>Add first</td></tr>
+<tr><td><span class="tag t-hold">RAMP-WAVE-2</span></td><td class="num">57,437</td><td>Everyone else not yet mailed</td><td class="num">4.3%</td><td>Add in small slices</td></tr>
+<tr><td><span class="tag t-ex">EXCLUDE</span></td><td class="num">44,081</td><td>No orders and joined in the last year, or an odd domain</td><td class="num">6.4%</td><td>Don't mail</td></tr>
+<tr><td><span class="tag t-ex">SUPPRESS</span></td><td class="num">1,470</td><td>Unsubscribed before, or on the ZeroBounce list</td><td class="num">·</td><td>Never mail</td></tr>
+<tr><td><span class="tag t-ex">NEW-EXCLUDE</span></td><td class="num">298</td><td>Joined in the last 30 days</td><td class="num">·</td><td>Skip next campaign</td></tr>
 </tbody>
 </table>
+<p class="small">Unsub rates are measured, not predicted. For the ramp waves it's the rate on someone's first Brevo email. Build any group in Brevo with the segment rule <code>UNSUB_RISK_TIER</code> equals the tier name.</p>
 </div>
 
-<h3>Unsubscribes per email, by what the contact has done</h3>
-<div class="card">
-<div class="bars">
-  <div class="bar"><span>Clicked in Brevo, last 90d</span><div class="track"><div class="fill" style="width:8.3%;background:var(--accent)"></div></div><span class="n">0.31%</span></div>
-  <div class="bar"><span>Mailed, never opened</span><div class="track"><div class="fill" style="width:21.4%;background:var(--info)"></div></div><span class="n">0.80%</span></div>
-  <div class="bar"><span>Opened, never clicked</span><div class="track"><div class="fill" style="width:29.7%;background:var(--info)"></div></div><span class="n">1.11%</span></div>
-  <div class="bar"><span>Never mailed, buyer</span><div class="track"><div class="fill" style="width:83.4%;background:var(--bad)"></div></div><span class="n">3.12%</span></div>
-  <div class="bar"><span>Never mailed, no order</span><div class="track"><div class="fill" style="width:100%;background:var(--bad)"></div></div><span class="n">3.74%</span></div>
-</div>
-<p class="small">Contacts who never opened unsubscribe less than openers only because they never see the unsubscribe link. They are still dead weight for inbox placement.</p>
-</div>
-
-<h2>2. What is driving the suspensions</h2>
+<h2>Why the account keeps getting suspended</h2>
 <div class="grid two">
-  <div class="card"><h3>The SendGrid backlog</h3><p>Unsubscribes went from 0.1% to 0.9% on engaged June and July sends to 2% to 5% on the August and September warm-ups. Of the 629 real unsubscribes, 556 (88%) came from contacts getting their first Brevo email.</p></div>
-  <div class="card"><h3>Buying doesn't protect them</h3><p>Never-mailed buyers still unsubscribe at 3.1%. Order count, revenue, Brevo's churn score, email domain and signup year barely move the rate.</p></div>
-  <div class="card"><h3>The SendGrid segments are broken</h3><p>Segments 24 to 30 contradict each other: 1,775 of the 3,186 contacts in "engaged 90d" are also in "never engaged". Audiences picked from these segments are close to random.</p></div>
-  <div class="card"><h3>Risk falls with every email</h3><p>First Brevo email 3.6%, second 1.8%, third 1.8%, fourth 1.25%, fifth or later 0.5%. People who didn't want the emails leave early, so a paced ramp gets safer as it goes.</p></div>
+  <div class="card"><h3>The SendGrid backlog</h3><p>June and July campaigns ran at 0.1% to 0.9% unsubscribes. The September warm-ups hit 2.5% to 4.9%. 88% of recent unsubscribes came from people getting their first Brevo email.</p></div>
+  <div class="card"><h3>The SendGrid segments are broken</h3><p>Segments 24 to 30 contradict each other. More than half of "engaged 90 days" is also in "never engaged". Audiences built from them are close to random.</p></div>
+</div>
+<div class="card">
+<h3>Risk drops with every email</h3>
+<div class="bars">
+  <div class="bar"><span>1st email</span><div class="track"><div class="fill" style="width:100%;background:var(--bad)"></div></div><span class="n">3.6%</span></div>
+  <div class="bar"><span>2nd</span><div class="track"><div class="fill" style="width:51%;background:var(--warn)"></div></div><span class="n">1.8%</span></div>
+  <div class="bar"><span>3rd</span><div class="track"><div class="fill" style="width:50.7%;background:var(--warn)"></div></div><span class="n">1.8%</span></div>
+  <div class="bar"><span>4th</span><div class="track"><div class="fill" style="width:35%;background:var(--info)"></div></div><span class="n">1.3%</span></div>
+  <div class="bar"><span>5th or later</span><div class="track"><div class="fill" style="width:14.3%;background:var(--accent)"></div></div><span class="n">0.5%</span></div>
+</div>
+<p class="small">All 40,935 Brevo emails sent since June. People who don't want the emails leave early. Whoever stays gets cheaper to mail.</p>
 </div>
 
-<h2>3. Splitting the two held-back pools</h2>
-<p>76,618 contacts had never been mailed from Brevo and 35,512 were WooCommerce buyers who never opted in. To split them we used the 15,189 contacts who got their first Brevo email since June (542 unsubscribed). A signal only counted if it held in both halves of the data: first emails before 15 Aug and after. Rates in the table are from first emails after 15 Aug, which are the real SendGrid-backlog sends.</p>
+<h2>How we split the backlog</h2>
+<p>Most "who will unsubscribe" signals didn't survive testing. We kept only the ones that held up in both halves of the data (first emails before and after 15 Aug).</p>
 <div class="grid two">
 <div class="card">
-<h3>Signals that held up</h3>
+<h3>What held up</h3>
 <div class="scroll"><table>
-<thead><tr><th>Signal</th><th class="num">Before 15 Aug</th><th class="num">After</th></tr></thead>
+<thead><tr><th>Signal</th><th class="num">1st-email unsubs</th></tr></thead>
 <tbody>
-<tr><td>3+ orders</td><td class="num">0.33%</td><td class="num">2.25%</td></tr>
-<tr><td>No orders</td><td class="num">1.83%</td><td class="num">5.83%</td></tr>
-<tr><td>On list 4+ years</td><td class="num">0.28%</td><td class="num">3.43%</td></tr>
-<tr><td>On list under 1 year</td><td class="num">2.45%</td><td class="num">6.23%</td></tr>
-<tr><td>Microsoft mailbox</td><td class="num">1.18%</td><td class="num">2.11%</td></tr>
-<tr><td>Small or unusual domain</td><td class="num">2.09%</td><td class="num">7.88%</td></tr>
+<tr><td>3+ orders</td><td class="num">2.3%</td></tr>
+<tr><td>No orders</td><td class="num">5.8%</td></tr>
+<tr><td>On the list 4+ years</td><td class="num">3.4%</td></tr>
+<tr><td>Joined in the last year</td><td class="num">6.2%</td></tr>
+<tr><td>Hotmail / Outlook</td><td class="num">2.1%</td></tr>
+<tr><td>Small or odd domains</td><td class="num">7.9%</td></tr>
 </tbody></table></div>
-<p class="small">Consent status did not hold up: no-opt-in buyers were worse before 15 Aug and better after. Brevo's churn score, SendGrid clicker status and past-product lists also flipped between halves, so they're not used.</p>
 </div>
 <div class="card">
-<h3>Resulting waves</h3>
-<div class="scroll"><table>
-<thead><tr><th>Group</th><th class="num">Never mailed</th><th class="num">No opt-in</th><th class="num">1st-email rate</th></tr></thead>
-<tbody>
-<tr><td><span class="tag t-small">WAVE-1</span></td><td class="num">9,087</td><td class="num">1,525</td><td class="num">1.7%</td></tr>
-<tr><td><span class="tag t-hold">WAVE-2</span></td><td class="num">52,241</td><td class="num">5,196</td><td class="num">4.3%</td></tr>
-<tr><td><span class="tag t-ex">EXCLUDE</span></td><td class="num">15,290</td><td class="num">28,791</td><td class="num">6.4%</td></tr>
-</tbody></table></div>
-<p class="small">These signals only moderately improve targeting: combined, they rank first-email unsubscribers at 0.56 (0.5 = coin flip). They help order the ramp; pacing still does most of the work. Wave 1's rate rests on 704 first emails, so watch its first send closely. Order data looks incomplete for many no-opt-in buyers, so some repeat buyers may sit in EXCLUDE.</p>
+<h3>What didn't</h3>
+<p>Consent status, Brevo's churn score, being a SendGrid clicker, and which product someone bought. Each one flipped direction between the two halves.</p>
+<p class="small">Even the signals that held only help a bit (0.56 on a scale where 0.5 is a coin flip). They're good for deciding who goes first. The pacing does the real work. Wave 1's number comes from 704 emails, so watch its first send.</p>
 </div>
 </div>
 
-<h3>Why a ramp works: unsubscribe rate by email number</h3>
-<div class="card">
-<div class="bars">
-  <div class="bar"><span>1st Brevo email</span><div class="track"><div class="fill" style="width:100%;background:var(--bad)"></div></div><span class="n">3.57%</span></div>
-  <div class="bar"><span>2nd</span><div class="track"><div class="fill" style="width:51%;background:var(--warn)"></div></div><span class="n">1.82%</span></div>
-  <div class="bar"><span>3rd</span><div class="track"><div class="fill" style="width:50.7%;background:var(--warn)"></div></div><span class="n">1.81%</span></div>
-  <div class="bar"><span>4th</span><div class="track"><div class="fill" style="width:35%;background:var(--info)"></div></div><span class="n">1.25%</span></div>
-  <div class="bar"><span>5th or later</span><div class="track"><div class="fill" style="width:14.3%;background:var(--accent)"></div></div><span class="n">0.51%</span></div>
-</div>
-<p class="small">All Brevo sends since June, 40,935 emails. Each wave's survivors get safer with every email, so later slices can be larger.</p>
-</div>
-
-<h2>4. How we did it</h2>
-<p>The whole pipeline, from the Brevo account to the exclude list.</p>
+<h2>How we did it</h2>
 <div class="card">
 <svg class="flow" viewBox="0 0 900 640" role="img" aria-label="Pipeline flow from Brevo account to exclude list">
   <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
@@ -217,7 +208,7 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
   <path class="ar" d="M350 266 L170 308" marker-end="url(#a)"/><path class="ar" d="M450 266 L450 308" marker-end="url(#a)"/><path class="ar" d="M280 345 L318 345" marker-end="url(#a)"/><path class="ar" d="M580 345 L618 345" marker-end="url(#a)"/>
 
   <rect class="nd" x="250" y="424" width="400" height="56" rx="10"/>
-  <text class="t1" x="450" y="448" text-anchor="middle">Which signal actually predicts? (section 6)</text>
+  <text class="t1" x="450" y="448" text-anchor="middle">Which signal actually predicts?</text>
   <text class="t2" x="450" y="466" text-anchor="middle">JEV 0.54 · simple model 0.65 · email-history groups 0.62</text>
   <path class="ar" d="M750 380 L600 422" marker-end="url(#a)"/>
 
@@ -234,7 +225,6 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
   <text class="t2" x="450" y="620" text-anchor="middle">JEV's score stays in the CSV as a column; the tiers come from measured email history.</text>
 </svg>
 </div>
-
 <h3>How each contact gets its tier</h3>
 <div class="card">
 <svg class="flow" viewBox="0 0 900 620" role="img" aria-label="Decision tree for tier assignment">
@@ -277,8 +267,7 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
 </svg>
 </div>
 
-<h2>5. How JEV was used, and what it showed</h2>
-<p>JEV read every contact: 118,769 subscribed contacts plus 11,276 backtest rows, 3 questions each (unsubscribe risk, whether the inbox is real, value as a buyer). Then we checked its answers against real unsubscribes.</p>
+<h2>What JEV did, and didn't do</h2>
 <div class="card">
 <svg class="flow" viewBox="0 0 900 300" role="img" aria-label="JEV run 1 versus run 2">
   <defs><marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
@@ -306,87 +295,67 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
   <path class="ar" d="M755 120 L620 168" marker-end="url(#c)"/>
 </svg>
 </div>
-
 <div class="grid two">
   <div class="card">
-    <h3>Where JEV helped</h3>
+    <h3>Where it helped</h3>
     <ul>
-      <li><b>Every contact, no sampling.</b> All 118,769 rows, as agreed in the meeting, in about 3 minutes for $2.31 a run.</li>
-      <li><b>Cheap to re-run.</b> Fixing the leaks took a full second run, which cost $2.31. At that price, auditing and re-scoring is easy.</li>
-      <li><b>The negative result.</b> A clean, full-list test showed per-contact prediction doesn't work on this backlog. That stops the team from spending more time building "engaged" segments out of it.</li>
+      <li>Scored all 118,769 contacts in about 3 minutes for $2.31.</li>
+      <li>Cheap enough to re-run after we fixed the data, which we did.</li>
+      <li>Showed clearly that the backlog can't be predicted, so nobody should waste time trying.</li>
     </ul>
   </div>
   <div class="card">
     <h3>Where it didn't</h3>
     <ul>
-      <li><b>It doesn't set the tiers.</b> On clean data it ranked unsubscribers no better than chance, so the final list would be the same without it.</li>
-      <li><b>It trusted what it was shown.</b> In run 1 it picked up a field that only changes after someone unsubscribes. You need a leak audit before trusting any score.</li>
-      <li><b>The limit is the data, not the model.</b> Most contacts have never been mailed from Brevo, so there is no behaviour for any model to read.</li>
+      <li>On clean data it was a coin flip (0.54), so it doesn't set the tiers.</li>
+      <li>On the first run it was fooled by a field that changes after someone unsubscribes.</li>
+      <li>The real limit is the data: most contacts have never been emailed from Brevo, so there's no behaviour to read.</li>
     </ul>
   </div>
 </div>
 
-<h2>6. The same job without JEV</h2>
-<p>JEV was one of three ways to score the list. For the other two we used the same backtest, or priced the same workload at current list prices.</p>
-
-<h3>Results: how well each method ranks the real unsubscribers</h3>
-<div class="card">
-<p class="small">Score from 0.5 (coin flip) to 1.0 (perfect). All measured on the same 11,276 contacts and 629 real unsubscribes, with leaks removed.</p>
-<div class="bars">
-  <div class="bar"><span>JEV, clean data</span><div class="track"><div class="fill" style="width:8%;background:var(--bad)"></div></div><span class="n">0.54</span></div>
-  <div class="bar"><span>Email-history groups (used)</span><div class="track"><div class="fill" style="width:24%;background:var(--accent)"></div></div><span class="n">0.62</span></div>
-  <div class="bar"><span>Simple statistical model</span><div class="track"><div class="fill" style="width:30%;background:var(--info)"></div></div><span class="n">0.65</span></div>
-  <div class="bar"><span>JEV run 1 (leaky, invalid)</span><div class="track"><div class="fill" style="width:36%;background:var(--line)"></div></div><span class="n">0.68</span></div>
-</div>
-<p class="small">Bars run from 0.5 on the left to 1.0 on the right. We used the email-history groups, not the slightly higher statistical model, because each group has a plain rule and a measured unsubscribe rate the team can act on. Both land well short of the 0.8 or more you'd need to pick individuals reliably.</p>
-</div>
-
-<h3>Money and time: scoring the same 130,045 rows (118,769 live + 11,276 backtest)</h3>
+<h3>Same job, other ways</h3>
 <div class="card scroll">
 <table>
-<thead><tr><th>Method</th><th class="num">Cost per run</th><th class="num">With Batch API (50% off)</th><th>Time</th><th>Result on this list</th></tr></thead>
+<thead><tr><th>Method</th><th class="num">Accuracy</th><th class="num">Cost per run</th><th>Time</th></tr></thead>
 <tbody>
-<tr><td><b>JEV</b> (what we ran)</td><td class="num">$2.31</td><td class="num">n/a</td><td>~3 min</td><td>0.54, chance level</td></tr>
-<tr><td>Claude Haiku 4.5, 50 contacts per call</td><td class="num">~$24</td><td class="num">~$12</td><td>Minutes, or up to 24 h in batch</td><td>Not run; same data, no reason to expect better</td></tr>
-<tr><td>Claude Sonnet 5, 50 contacts per call</td><td class="num">~$47</td><td class="num">~$24</td><td>Minutes, or up to 24 h in batch</td><td>Not run</td></tr>
-<tr><td>Claude Opus 5.5, 50 contacts per call</td><td class="num">~$94+</td><td class="num">~$47+</td><td>Minutes, or up to 24 h in batch</td><td>Not run; thinking tokens add more</td></tr>
-<tr><td>Any LLM, one contact per call</td><td class="num">$70 to $280</td><td class="num">$35 to $140</td><td>Hours at typical rate limits</td><td>Not run</td></tr>
-<tr><td>No model: email-history groups (used)</td><td class="num">$0</td><td class="num">n/a</td><td>Analyst time</td><td>0.62, and gives measured rates</td></tr>
+<tr><td><b>JEV</b></td><td class="num">0.54</td><td class="num">$2.31</td><td>~3 min</td></tr>
+<tr><td>Email-history groups (what we used)</td><td class="num">0.62</td><td class="num">$0</td><td>Analyst time</td></tr>
+<tr><td>Simple statistical model</td><td class="num">0.65</td><td class="num">$0</td><td>Analyst time</td></tr>
+<tr><td>Claude Haiku 4.5</td><td class="num">not run</td><td class="num">~$24 ($12 batched)</td><td>Minutes to hours</td></tr>
+<tr><td>Claude Sonnet 5</td><td class="num">not run</td><td class="num">~$47 ($24 batched)</td><td>Minutes to hours</td></tr>
+<tr><td>Claude Opus 5.5</td><td class="num">not run</td><td class="num">~$94+ ($47 batched)</td><td>Minutes to hours</td></tr>
 </tbody>
 </table>
-<p class="small">LLM estimates use the token counts we measured: about 48 tokens per contact, 370 tokens of shared context and questions per call, and about 25 output tokens per contact. Prices are Anthropic list prices per million tokens: Haiku 4.5 $1 in / $5 out, Sonnet 5 $2 / $10, Opus 5.5 $4 / $20. This job needed two full runs because of the leak fix, so double every figure: JEV $4.62 against $24 to $188 for the LLM options.</p>
+<p class="small">Accuracy runs from 0.5 (coin flip) to 1.0 (perfect), all measured on the same 11,276 contacts and 629 real unsubscribes. LLM costs are estimated from measured token counts at list prices for 130,045 rows. We needed two runs, so double them.</p>
 </div>
+<div class="callout info"><b>Bottom line:</b> JEV is 5x to 40x cheaper than an LLM for reading a whole list, and fast enough to re-run after every fix. It just can't find signal that isn't there.</div>
 
-<div class="callout info">
-<b>Bottom line on JEV:</b> for reading a full list, it is 5x to 40x cheaper than an LLM and fast enough to re-run after every fix. On this account, though, no method could predict unsubscribes from pre-send data. The tiers come from measured email history, and JEV's value was the fast, cheap, complete test that proved it.
-</div>
-
-<h2>7. What the team should do next</h2>
-<p>Brevo's exact suspension threshold isn't known. The best guide is past sends: June and July ran at 0.1% to 0.9% unsubscribes, and the September warm-ups at 2.5% to 4.9% got rejected. So keep every campaign at 1% or below.</p>
+<h2>The send plan</h2>
+<p>We don't know Brevo's exact suspension line. What we do know: sends at 0.1% to 0.9% went fine, and sends at 2.5% to 4.9% got rejected. So aim for 1% or less per campaign.</p>
 <div class="card">
 <ol>
-  <li><b>Next campaigns:</b> SEND, SEND-SMALL and HOLD (4,871) plus wave 1 in two halves of about 5,300 each. Each campaign should come out around 1.2%.</li>
-  <li><b>Then wave 2:</b> add it in slices sized to keep the campaign at 1% or below. Survivors get safer with every email, so each slice can be bigger than the last.</li>
-  <li><b>At least 3 days between emails to the same person.</b> The Labor Day warm-ups went out on 4, 5 and 7 Sept, and that spacing is part of why the rates spiked.</li>
-  <li><b>Stop rule:</b> if a send goes over 1% unsubscribes, halve the next slice. Drop anyone who complains immediately.</li>
-  <li><b>Never mail</b> EXCLUDE, SUPPRESS or NEW-EXCLUDE.</li>
-  <li><b>Fix segments 24 to 30</b> before anyone builds audiences from them again.</li>
-  <li><b>Each contact carries its tier</b> in the Brevo contact attribute <code>UNSUB_RISK_TIER</code>, so every group above can be built as a segment.</li>
+  <li><b>Next two campaigns:</b> the 4,871 safe contacts, plus half of wave 1 each time. That should land around 1.2%.</li>
+  <li><b>Then wave 2:</b> add it in slices small enough to stay under 1%. The slices can grow as people stick around.</li>
+  <li><b>Give it three days:</b> at least three days between emails to the same person. The Labor Day warm-ups went out on 4, 5 and 7 Sept.</li>
+  <li><b>Stop rule:</b> over 1% on a send? Halve the next slice. Anyone who marks spam comes off right away.</li>
+  <li><b>Never mail</b> EXCLUDE, SUPPRESS or NEW-EXCLUDE, and don't build audiences from segments 24 to 30.</li>
 </ol>
 </div>
 
-<h2>8. Method notes</h2>
-<div class="card small">
+<details class="card small">
+<summary><b>Method notes</b></summary>
 <ul>
-  <li>Backtest cut-off 1 Aug 2026. Features as of that date; label = unsubscribed or complained afterwards. Contacts created after the cut-off or already unsubscribed before it are left out.</li>
-  <li>Fields hidden from the backtest because they change after an unsubscribe: WooCommerce subscription status, the audience lists #63 and #64, and live engagement segments. All of them would otherwise hand the answer to the model.</li>
-  <li>Brevo only keeps per-contact email history from June 2026, so "never mailed" means never mailed from Brevo in that window.</li>
-  <li>JEV model: typesafe/jev-1.13-20260917 through OpenRouter, 100 contacts per call, 3 questions per contact.</li>
-  <li>Pull: 153,608 per-contact history calls plus about 300 for contacts, lists, segments and campaigns. Campaign recipient exports would cut that to minutes and are the route for the reusable tool.</li>
+  <li>Backtest: features as of 1 Aug 2026; label = unsubscribed or complained after that. 11,276 contacts, 629 unsubscribes.</li>
+  <li>Hidden from the backtest because they change after someone unsubscribes: WooCommerce subscription status, lists #63 and #64, and live engagement segments.</li>
+  <li>Brevo keeps per-contact email history from June 2026 only, so "never mailed" means not mailed from Brevo since then.</li>
+  <li>Order data looks incomplete for many WooCommerce buyers without opt-in, so some repeat buyers may sit in EXCLUDE.</li>
+  <li>JEV: typesafe/jev-1.13-20260917 via OpenRouter, 100 contacts per call, 3 questions each.</li>
+  <li>The pull took about 2.5 hours through the API. Campaign recipient exports would cut that to minutes next time.</li>
 </ul>
-</div>
+</details>
 
-<footer>Prepared for the managed services team, 23 Sep 2026. Contact-level files are shared privately, not on this page.</footer>
+<footer>Prepared for the managed services team. Contact-level files are shared privately.</footer>
 </div>
 </body>
 </html>
