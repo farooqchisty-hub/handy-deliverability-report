@@ -92,52 +92,125 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
 <div class="wrap">
 
 <header>
-  <div class="kicker">Managed services · Deliverability · Sep 2026</div>
-  <h1>Handy: who to mail, who to drop</h1>
-  <p class="lede">We checked all 118,769 subscribed contacts against who actually unsubscribed. About 5k are safe today, 68k can be brought back slowly, and 46k should go.</p>
-  <p class="meta">Read-only pull from the Brevo account: 153,608 contacts, their email history since June, every list and segment. Nothing was sent. The only change in the account is one new field, <code>UNSUB_RISK_TIER</code>. This page shows totals only.</p>
+  <div class="kicker">Managed services · Deliverability · Sep 2026 · v3</div>
+  <h1>Handy: who to mail, who to hold</h1>
+  <p class="lede">We only judge people Brevo has actually emailed. That leaves 6,211 contacts to mail now and 7,387 for one last email. The other 103,701 have no Brevo history, so they wait until we get their SendGrid data.</p>
+  <p class="meta">Read-only pull from the Brevo account: 153,608 contacts, their email history since June, every list, segment and campaign. Nothing was sent. The only change in the account is one new contact field, <code>UNSUB_RISK_TIER</code>. This page shows totals only; contact-level files are shared privately.</p>
 </header>
 
 <div class="grid kpis">
   <div class="kpi"><div class="v">118,769</div><div class="l">subscribed contacts checked</div></div>
-  <div class="kpi good"><div class="v">4,871</div><div class="l">safe to mail now</div></div>
-  <div class="kpi"><div class="v">68,049</div><div class="l">reachable through a slow ramp</div></div>
-  <div class="kpi bad"><div class="v">45,849</div><div class="l">don't mail</div></div>
+  <div class="kpi good"><div class="v">6,211</div><div class="l">mail now (SEND + SEND-SMALL)</div></div>
+  <div class="kpi"><div class="v">7,387</div><div class="l">one last-chance email (HOLD)</div></div>
+  <div class="kpi bad"><div class="v">103,701</div><div class="l">held: never emailed from Brevo</div></div>
 </div>
 
 <h2>The short version</h2>
 <div class="card">
 <ul>
-  <li>The suspensions started when we began mailing the old SendGrid list. Those first emails lose 3.6% of people to unsubscribes.</li>
-  <li>People get safer with every email they stay for. By the fifth email it's 0.5%.</li>
-  <li>So the fix is pacing, not a smarter model: mix a small slice of new people into each campaign.</li>
-  <li>JEV scored every contact in minutes for about $2. It couldn't predict who would unsubscribe, and neither could anything else.</li>
-  <li>Every contact now has its tier in Brevo, so each group is one segment away.</li>
+  <li>The suspensions started when the old SendGrid list began getting Brevo emails. First emails lose 3.6% of people.</li>
+  <li>88% of subscribed contacts have no Brevo email history, so there's nothing to judge them on. We hold them.</li>
+  <li>The 14,189 people Brevo has emailed get a tier from how they actually behaved.</li>
+  <li>Risk falls with every email someone stays for: 3.6% on the first, 0.5% by the fifth.</li>
+  <li>JEV scored everyone in 3 minutes for $2.31, but on no-history contacts it was a coin flip.</li>
+  <li>The way to unlock the held 103,701: export SendGrid's open and click history for list #64.</li>
 </ul>
 </div>
 
-<h2>The tiers</h2>
+<h2>1. The decision: only tier people we've emailed</h2>
+<p>You can only predict who'll unsubscribe from people you've seen react to an email. Brevo keeps that history per contact from June onwards. Everyone mailed in that window has a real track record. Everyone else doesn't, and no model or attribute could tell them apart (section 7). So we split the list in two:</p>
+<div class="grid two">
+  <div class="card"><h3>Emailed from Brevo: 14,189</h3><p>Tiered by their own clicks and opens. The rates are measured on what similar people did after 1 Aug. This is the audience for the next campaigns.</p></div>
+  <div class="card"><h3>Never emailed from Brevo: 103,701</h3><p>Held. 79,840 of them came from SendGrid, where they were emailed before the move. Their SendGrid history is the missing piece (section 4).</p></div>
+</div>
+<details class="card small">
+<summary><b>How this changed from earlier versions</b></summary>
+<ul>
+  <li><b>v1:</b> excluded 113,898, because first emails ran at 3.6%. Too blunt: it treated everyone with no history the same.</li>
+  <li><b>v2:</b> split the no-history pool into ramp waves using orders, time on list and email provider. It helped a little (0.56 accuracy, 0.5 is a coin flip), but it still meant guessing about people nobody had seen react.</li>
+  <li><b>v3 (this page):</b> only people with Brevo history get a sendable tier. This also fixes a v2 mistake: 8,727 contacts who had been emailed (WooCommerce buyers without opt-in) were given first-email rules instead of their own history.</li>
+</ul>
+</details>
+
+<h2>2. The tiers</h2>
 <div class="card scroll">
 <table>
-<thead><tr><th>Tier</th><th class="num">Contacts</th><th>Who</th><th class="num">Unsubs</th><th>What to do</th></tr></thead>
+<thead><tr><th>Tier</th><th class="num">Contacts</th><th>Who</th><th class="num">Unsubs per email</th><th>What to do</th></tr></thead>
 <tbody>
-<tr><td><span class="tag t-send">SEND</span></td><td class="num">748</td><td>Clicked in the last 90 days</td><td class="num">0.3%</td><td>Mail normally</td></tr>
-<tr><td><span class="tag t-small">SEND-SMALL</span></td><td class="num">1,749</td><td>Opened, never clicked</td><td class="num">1.1%</td><td>Batches of 500 or fewer</td></tr>
-<tr><td><span class="tag t-hold">HOLD</span></td><td class="num">2,374</td><td>Mailed, never opened</td><td class="num">0.8%</td><td>One last email, then drop</td></tr>
-<tr><td><span class="tag t-small">RAMP-WAVE-1</span></td><td class="num">10,612</td><td>Never mailed, but 3+ orders or a Hotmail/Outlook address</td><td class="num">1.7%</td><td>Add first</td></tr>
-<tr><td><span class="tag t-hold">RAMP-WAVE-2</span></td><td class="num">57,437</td><td>Everyone else not yet mailed</td><td class="num">4.3%</td><td>Add in small slices</td></tr>
-<tr><td><span class="tag t-ex">EXCLUDE</span></td><td class="num">44,081</td><td>No orders and joined in the last year, or an odd domain</td><td class="num">6.4%</td><td>Don't mail</td></tr>
-<tr><td><span class="tag t-ex">SUPPRESS</span></td><td class="num">1,470</td><td>Unsubscribed before, or on the ZeroBounce list</td><td class="num">·</td><td>Never mail</td></tr>
-<tr><td><span class="tag t-ex">NEW-EXCLUDE</span></td><td class="num">298</td><td>Joined in the last 30 days</td><td class="num">·</td><td>Skip next campaign</td></tr>
+<tr><td><span class="tag t-send">SEND</span></td><td class="num">2,386</td><td>Clicked a Brevo email in the last 90 days</td><td class="num">0.3%</td><td>Mail normally</td></tr>
+<tr><td><span class="tag t-small">SEND-SMALL</span></td><td class="num">3,825</td><td>Opened at least once, no recent click</td><td class="num">1.1%</td><td>Mail in batches of 1,000 or fewer</td></tr>
+<tr><td><span class="tag t-hold">HOLD</span></td><td class="num">7,387</td><td>Emailed, never opened</td><td class="num">0.8%</td><td>One last-chance email, then drop anyone who ignores it</td></tr>
+<tr><td><span class="tag t-hold">HOLD-NO-HISTORY</span></td><td class="num">103,701</td><td>Never emailed from Brevo since June</td><td class="num">3.8% to 5.8% on a 1st email</td><td>Don't mail until SendGrid data is in</td></tr>
+<tr><td><span class="tag t-ex">SUPPRESS</span></td><td class="num">1,470</td><td>Unsubscribed before (1,003) or on the ZeroBounce "Don't send" list (467)</td><td class="num">·</td><td>Never mail</td></tr>
 </tbody>
 </table>
-<p class="small">Unsub rates are measured, not predicted. For the ramp waves it's the rate on someone's first Brevo email. Build any group in Brevo with the segment rule <code>UNSUB_RISK_TIER</code> equals the tier name.</p>
+<p class="small">"Unsubs per email" is measured: we took everyone emailed after 1 Aug, grouped them by what their history looked like on 1 Aug, and counted who unsubscribed or complained (11,276 contacts, 629 unsubscribes). HOLD looks lower than SEND-SMALL only because people who never open never see the unsubscribe link; they still hurt inbox placement.</p>
+<p class="small"><b>In Brevo:</b> build any group with the segment rule <code>UNSUB_RISK_TIER</code> equals the tier name.</p>
+</div>
+<div class="callout"><b>Consent check needed:</b> 8,727 of the 14,189 emailed contacts are WooCommerce buyers marked "not-subscribed" with no opt-in on record, including 1,638 in SEND. They've already been emailed and many engage, but someone should confirm where their consent comes from before they stay in the audience.</div>
+
+<h2>3. Who's in the held pool</h2>
+<div class="grid two">
+<div class="card">
+<h3>Breakdown of the 103,701</h3>
+<div class="scroll"><table>
+<tbody>
+<tr><td>On the SendGrid list (#64)</td><td class="num">79,840</td></tr>
+<tr><td>Not on it (mostly WooCommerce buyers)</td><td class="num">23,861</td></tr>
+<tr><td>Have order data</td><td class="num">33,773</td></tr>
+<tr><td>No orders, no revenue</td><td class="num">69,928</td></tr>
+<tr><td>WooCommerce buyers without opt-in</td><td class="num">26,785</td></tr>
+</tbody></table></div>
+</div>
+<div class="card">
+<h3>What happens when people like them get emailed</h3>
+<div class="scroll"><table>
+<thead><tr><th>Group</th><th class="num">1st email</th><th class="num">By 2nd</th></tr></thead>
+<tbody>
+<tr><td>No orders</td><td class="num">5.8%</td><td class="num">7.5%</td></tr>
+<tr><td>Has orders</td><td class="num">3.8%</td><td class="num">5.3%</td></tr>
+</tbody></table></div>
+<p class="small">From 8,071 contacts who got their first Brevo email after 15 Aug. Even the better group is about four times the June and July campaign rates.</p>
+</div>
 </div>
 
-<h2>Why the account keeps getting suspended</h2>
-<div class="grid two">
-  <div class="card"><h3>The SendGrid backlog</h3><p>June and July campaigns ran at 0.1% to 0.9% unsubscribes. The September warm-ups hit 2.5% to 4.9%. 88% of recent unsubscribes came from people getting their first Brevo email.</p></div>
-  <div class="card"><h3>The SendGrid segments are broken</h3><p>Segments 24 to 30 contradict each other. More than half of "engaged 90 days" is also in "never engaged". Audiences built from them are close to random.</p></div>
+<h2>4. How to unlock the held pool</h2>
+<div class="card">
+<p>79,840 of the held contacts were emailed through SendGrid before the move. SendGrid knows who opened and clicked. Brevo only got the list, and its SendGrid segments (24 to 30) are broken: more than half of "engaged 90 days" is also in "never engaged".</p>
+<h3>What to ask for</h3>
+<ul>
+  <li>A per-contact export for SendGrid list #64 with: last open date, last click date, emails received, bounces, spam reports and unsubscribe date.</li>
+  <li>Usually the Email Activity export or a contact export with engagement fields, depending on the SendGrid plan. Whoever ran the SendGrid account can pull it.</li>
+</ul>
+<h3>What we'd do with it</h3>
+<ol>
+  <li>Match it to Brevo contacts by email.</li>
+  <li>Check it predicts: the people Brevo has already emailed from list #64 give us a backtest.</li>
+  <li>Move recent SendGrid clickers into a slow ramp, and put long-dead contacts (no opens in 12+ months) on the do-not-mail list.</li>
+  <li>Update <code>UNSUB_RISK_TIER</code>. Rescoring takes minutes once the file lands.</li>
+</ol>
+<p class="small">If the export can't be found, there's a fallback: the v2 ramp waves are kept in the contact file (9,768 in wave 1, 54,918 in wave 2, 38,717 excluded). Using them is a business call, because it means emailing people we can't assess.</p>
+</div>
+
+<h2>5. Why the account keeps getting suspended</h2>
+<div class="card scroll">
+<h3>Recent campaigns</h3>
+<table>
+<thead><tr><th>Date</th><th>Campaign</th><th class="num">Sent</th><th class="num">Unsubs</th></tr></thead>
+<tbody>
+<tr><td>20 Jun</td><td>Handy 1 Final Sale, Audience A</td><td class="num">3,158</td><td class="num">0.38%</td></tr>
+<tr><td>26 Jun</td><td>Pride, Audience A</td><td class="num">3,012</td><td class="num">0.60%</td></tr>
+<tr><td>1 Jul</td><td>4th July, Audience A</td><td class="num">3,033</td><td class="num">0.43%</td></tr>
+<tr><td>12 Aug</td><td>Handy 2 Shipping, Audience A</td><td class="num">3,801</td><td class="num">2.05%</td></tr>
+<tr><td>4 Sep</td><td>Labor Day warm-up 1</td><td class="num">1,910</td><td class="num">2.88%</td></tr>
+<tr><td>5 Sep</td><td>Labor Day warm-up 2</td><td class="num">1,722</td><td class="num">2.50%</td></tr>
+<tr><td>7 Sep</td><td>Labor Day warm-up 3</td><td class="num">1,892</td><td class="num">4.92%</td></tr>
+<tr><td>9 Sep</td><td>Quickie launch, group 1</td><td class="num">2,606</td><td class="num">3.07%</td></tr>
+<tr><td>9 Sep</td><td>Quickie launch, group 3</td><td class="num">1,769</td><td class="num">3.67%</td></tr>
+<tr><td>18 Sep</td><td>Newsletter #6</td><td class="num">1,159</td><td class="num">1.90%</td></tr>
+</tbody>
+</table>
+<p class="small">Engaged audiences in June and July stayed under 1%. The jump starts in August, when first-time contacts from the SendGrid list were added. 88% of the unsubscribes since 1 Aug came from people getting their first Brevo email. The three Labor Day warm-ups also went out within four days.</p>
 </div>
 <div class="card">
 <h3>Risk drops with every email</h3>
@@ -148,33 +221,10 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
   <div class="bar"><span>4th</span><div class="track"><div class="fill" style="width:35%;background:var(--info)"></div></div><span class="n">1.3%</span></div>
   <div class="bar"><span>5th or later</span><div class="track"><div class="fill" style="width:14.3%;background:var(--accent)"></div></div><span class="n">0.5%</span></div>
 </div>
-<p class="small">All 40,935 Brevo emails sent since June. People who don't want the emails leave early. Whoever stays gets cheaper to mail.</p>
+<p class="small">All 40,935 Brevo emails since June. People who don't want the emails leave early; whoever stays gets cheaper to mail. It's why any return of the held pool has to be slow.</p>
 </div>
 
-<h2>How we split the backlog</h2>
-<p>Most "who will unsubscribe" signals didn't survive testing. We kept only the ones that held up in both halves of the data (first emails before and after 15 Aug).</p>
-<div class="grid two">
-<div class="card">
-<h3>What held up</h3>
-<div class="scroll"><table>
-<thead><tr><th>Signal</th><th class="num">1st-email unsubs</th></tr></thead>
-<tbody>
-<tr><td>3+ orders</td><td class="num">2.3%</td></tr>
-<tr><td>No orders</td><td class="num">5.8%</td></tr>
-<tr><td>On the list 4+ years</td><td class="num">3.4%</td></tr>
-<tr><td>Joined in the last year</td><td class="num">6.2%</td></tr>
-<tr><td>Hotmail / Outlook</td><td class="num">2.1%</td></tr>
-<tr><td>Small or odd domains</td><td class="num">7.9%</td></tr>
-</tbody></table></div>
-</div>
-<div class="card">
-<h3>What didn't</h3>
-<p>Consent status, Brevo's churn score, being a SendGrid clicker, and which product someone bought. Each one flipped direction between the two halves.</p>
-<p class="small">Even the signals that held only help a bit (0.56 on a scale where 0.5 is a coin flip). They're good for deciding who goes first. The pacing does the real work. Wave 1's number comes from 704 emails, so watch its first send.</p>
-</div>
-</div>
-
-<h2>How we did it</h2>
+<h2>6. How we did it</h2>
 <div class="card">
 <svg class="flow" viewBox="0 0 900 640" role="img" aria-label="Pipeline flow from Brevo account to exclude list">
   <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
@@ -219,60 +269,59 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
 
   <rect class="nd b" x="20" y="524" width="260" height="62" rx="10"/>
   <text class="t1" x="150" y="550" text-anchor="middle">Hard rules first</text>
-  <text class="t2" x="150" y="568" text-anchor="middle">ZeroBounce, unsubscribed, new contacts</text>
+  <text class="t2" x="150" y="568" text-anchor="middle">ZeroBounce, unsubscribed, no history</text>
   <rect class="nd g" x="320" y="524" width="260" height="62" rx="10"/>
-  <text class="t1" x="450" y="550" text-anchor="middle">Tiers + ramp waves</text>
-  <text class="t2" x="450" y="568" text-anchor="middle">email history, then orders, tenure, provider</text>
+  <text class="t1" x="450" y="550" text-anchor="middle">Tier by email history</text>
+  <text class="t2" x="450" y="568" text-anchor="middle">only contacts Brevo has emailed</text>
   <rect class="nd i" x="620" y="524" width="260" height="62" rx="10"/>
   <text class="t1" x="750" y="550" text-anchor="middle">Exclude list + tier CSV</text>
-  <text class="t2" x="750" y="568" text-anchor="middle">45,849 excluded, 72,920 reachable</text>
+  <text class="t2" x="750" y="568" text-anchor="middle">6,211 mail now, 103,701 held</text>
   <path class="ar" d="M380 480 L170 522" marker-end="url(#a)"/><path class="ar" d="M450 480 L450 522" marker-end="url(#a)"/><path class="ar" d="M280 555 L318 555" marker-end="url(#a)"/><path class="ar" d="M580 555 L618 555" marker-end="url(#a)"/>
-  <text class="t2" x="450" y="620" text-anchor="middle">JEV's score stays in the CSV as a column; the tiers come from measured email history.</text>
+  <text class="t2" x="450" y="620" text-anchor="middle">JEV's score stays in the CSV as a column. Tiers come from each contact's own email history.</text>
 </svg>
 </div>
 <h3>How each contact gets its tier</h3>
 <div class="card">
-<svg class="flow" viewBox="0 0 900 620" role="img" aria-label="Decision tree for tier assignment">
+<svg class="flow" viewBox="0 0 900 390" role="img" aria-label="Decision tree for tier assignment">
   <defs><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
-  <g>
-    <rect class="nd" x="20" y="14" width="380" height="44" rx="8"/><text class="t1" x="210" y="41" text-anchor="middle">On ZeroBounce list or unsubscribed before?</text>
-    <rect class="nd b" x="520" y="14" width="360" height="44" rx="8"/><text class="t1" x="700" y="41" text-anchor="middle">SUPPRESS · 1,470</text>
-    <path class="ar" d="M400 36 L518 36" marker-end="url(#b)"/><text class="t2" x="458" y="28" text-anchor="middle">yes</text>
-
-    <rect class="nd" x="20" y="84" width="380" height="44" rx="8"/><text class="t1" x="210" y="111" text-anchor="middle">Added in last 30 days, never mailed?</text>
-    <rect class="nd b" x="520" y="84" width="360" height="44" rx="8"/><text class="t1" x="700" y="111" text-anchor="middle">NEW-EXCLUDE · 298</text>
-    <path class="ar" d="M400 106 L518 106" marker-end="url(#b)"/><text class="t2" x="458" y="98" text-anchor="middle">yes</text>
-
-    <rect class="nd" x="20" y="154" width="380" height="44" rx="8"/><text class="t1" x="210" y="181" text-anchor="middle">Has opt-in and clicked in last 90 days?</text>
-    <rect class="nd g" x="520" y="154" width="360" height="44" rx="8"/><text class="t1" x="700" y="181" text-anchor="middle">SEND · 748 · 0.31% per email</text>
-    <path class="ar" d="M400 176 L518 176" marker-end="url(#b)"/><text class="t2" x="458" y="168" text-anchor="middle">yes</text>
-
-    <rect class="nd" x="20" y="224" width="380" height="44" rx="8"/><text class="t1" x="210" y="251" text-anchor="middle">Has opt-in and opened a Brevo email?</text>
-    <rect class="nd i" x="520" y="224" width="360" height="44" rx="8"/><text class="t1" x="700" y="251" text-anchor="middle">SEND-SMALL · 1,749 · 1.11%</text>
-    <path class="ar" d="M400 246 L518 246" marker-end="url(#b)"/><text class="t2" x="458" y="238" text-anchor="middle">yes</text>
-
-    <rect class="nd" x="20" y="294" width="380" height="44" rx="8"/><text class="t1" x="210" y="321" text-anchor="middle">Has opt-in and mailed from Brevo?</text>
-    <rect class="nd w" x="520" y="294" width="360" height="44" rx="8"/><text class="t1" x="700" y="321" text-anchor="middle">HOLD · 2,374 · 0.80%</text>
-    <path class="ar" d="M400 316 L518 316" marker-end="url(#b)"/><text class="t2" x="458" y="308" text-anchor="middle">yes</text>
-
-    <rect class="nd i" x="20" y="364" width="380" height="54" rx="8"/><text class="t1" x="210" y="387" text-anchor="middle">Held-back pools: never mailed</text><text class="t2" x="210" y="405" text-anchor="middle">or WooCommerce buyer with no opt-in (112,130)</text>
-
-    <rect class="nd" x="20" y="444" width="380" height="44" rx="8"/><text class="t1" x="210" y="471" text-anchor="middle">No orders and on list under 1 year, or odd domain?</text>
-    <rect class="nd b" x="520" y="444" width="360" height="44" rx="8"/><text class="t1" x="700" y="471" text-anchor="middle">EXCLUDE · 44,081 · 6.4%</text>
-    <path class="ar" d="M400 466 L518 466" marker-end="url(#b)"/><text class="t2" x="458" y="458" text-anchor="middle">yes</text>
-
-    <rect class="nd" x="20" y="514" width="380" height="44" rx="8"/><text class="t1" x="210" y="541" text-anchor="middle">3+ orders or Microsoft mailbox?</text>
-    <rect class="nd i" x="520" y="514" width="360" height="44" rx="8"/><text class="t1" x="700" y="541" text-anchor="middle">RAMP-WAVE-1 · 10,612 · 1.7%</text>
-    <path class="ar" d="M400 536 L518 536" marker-end="url(#b)"/><text class="t2" x="458" y="528" text-anchor="middle">yes</text>
-
-    <rect class="nd w" x="520" y="572" width="360" height="44" rx="8"/><text class="t1" x="700" y="599" text-anchor="middle">RAMP-WAVE-2 · 57,437 · 4.3%</text>
-    <path class="ar" d="M210 558 L210 594 L518 594" marker-end="url(#b)"/><text class="t2" x="236" y="586">no</text>
-    <path class="ar" d="M210 58 L210 82" marker-end="url(#b)"/><path class="ar" d="M210 128 L210 152" marker-end="url(#b)"/><path class="ar" d="M210 198 L210 222" marker-end="url(#b)"/><path class="ar" d="M210 268 L210 292" marker-end="url(#b)"/><path class="ar" d="M210 338 L210 362" marker-end="url(#b)"/><path class="ar" d="M210 418 L210 442" marker-end="url(#b)"/><path class="ar" d="M210 488 L210 512" marker-end="url(#b)"/>
-  </g>
+  <rect class="nd" x="20" y="14" width="380" height="44" rx="8"/><text class="t1" x="210" y="41" text-anchor="middle">On ZeroBounce list or unsubscribed before?</text>
+  <rect class="nd b" x="520" y="14" width="360" height="44" rx="8"/><text class="t1" x="700" y="41" text-anchor="middle">SUPPRESS · 1,470</text>
+  <path class="ar" d="M400 36 L518 36" marker-end="url(#b)"/><text class="t2" x="458" y="28" text-anchor="middle">yes</text>
+  <rect class="nd" x="20" y="90" width="380" height="44" rx="8"/><text class="t1" x="210" y="117" text-anchor="middle">Emailed from Brevo since June?</text>
+  <rect class="nd w" x="520" y="90" width="360" height="44" rx="8"/><text class="t1" x="700" y="117" text-anchor="middle">HOLD-NO-HISTORY · 103,701</text>
+  <path class="ar" d="M400 112 L518 112" marker-end="url(#b)"/><text class="t2" x="458" y="104" text-anchor="middle">no</text>
+  <rect class="nd" x="20" y="166" width="380" height="44" rx="8"/><text class="t1" x="210" y="193" text-anchor="middle">Clicked in the last 90 days?</text>
+  <rect class="nd g" x="520" y="166" width="360" height="44" rx="8"/><text class="t1" x="700" y="193" text-anchor="middle">SEND · 2,386 · 0.3% per email</text>
+  <path class="ar" d="M400 188 L518 188" marker-end="url(#b)"/><text class="t2" x="458" y="180" text-anchor="middle">yes</text>
+  <rect class="nd" x="20" y="242" width="380" height="44" rx="8"/><text class="t1" x="210" y="269" text-anchor="middle">Opened at least once?</text>
+  <rect class="nd i" x="520" y="242" width="360" height="44" rx="8"/><text class="t1" x="700" y="269" text-anchor="middle">SEND-SMALL · 3,825 · 1.1%</text>
+  <path class="ar" d="M400 264 L518 264" marker-end="url(#b)"/><text class="t2" x="458" y="256" text-anchor="middle">yes</text>
+  <rect class="nd w" x="520" y="318" width="360" height="44" rx="8"/><text class="t1" x="700" y="345" text-anchor="middle">HOLD · 7,387 · 0.8% · one last email</text>
+  <path class="ar" d="M210 286 L210 340 L518 340" marker-end="url(#b)"/><text class="t2" x="236" y="332">no</text>
+  <path class="ar" d="M210 58 L210 88" marker-end="url(#b)"/><text class="t2" x="222" y="78">no</text>
+  <path class="ar" d="M210 134 L210 164" marker-end="url(#b)"/><text class="t2" x="222" y="154">yes</text>
+  <path class="ar" d="M210 210 L210 240" marker-end="url(#b)"/><text class="t2" x="222" y="230">no</text>
 </svg>
+
+</div>
+<h3>What we had to work with</h3>
+<div class="card scroll">
+<table>
+<thead><tr><th>Data</th><th class="num">Coverage</th><th>Used for</th></tr></thead>
+<tbody>
+<tr><td>Brevo email history (sends, opens, clicks, unsubscribes)</td><td class="num">12% of subscribed, from June</td><td>The tiers</td></tr>
+<tr><td>WooCommerce orders and revenue</td><td class="num">about 31% have orders</td><td>Tested; helps a little</td></tr>
+<tr><td>Brevo predictive scores (churn, RFM, CLV)</td><td class="num">45%</td><td>Tested; didn't hold up</td></tr>
+<tr><td>WooCommerce subscription status</td><td class="num">25%</td><td>Consent flag only (it changes after an unsubscribe)</td></tr>
+<tr><td>First name</td><td class="num">33%</td><td>Not predictive</td></tr>
+<tr><td>Country</td><td class="num">1%</td><td>Too sparse</td></tr>
+<tr><td>Lists (62) and segments (31)</td><td class="num">all</td><td>ZeroBounce and unsubscribe rules; SendGrid segments found broken</td></tr>
+</tbody>
+</table>
 </div>
 
-<h2>What JEV did, and didn't do</h2>
+<h2>7. What JEV did, and didn't do</h2>
+<p>JEV read every subscribed contact: 118,769 rows, 3 questions each (how likely to unsubscribe, is the inbox real, how valuable as a buyer). For 88% of them it had no email behaviour to read, only an address and sometimes some orders.</p>
 <div class="card">
 <svg class="flow" viewBox="0 0 900 300" role="img" aria-label="JEV run 1 versus run 2">
   <defs><marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
@@ -306,15 +355,15 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
     <ul>
       <li>Scored all 118,769 contacts in about 3 minutes for $2.31.</li>
       <li>Cheap enough to re-run after we fixed the data, which we did.</li>
-      <li>Showed clearly that the backlog can't be predicted, so nobody should waste time trying.</li>
+      <li>Showed clearly that people with no history can't be predicted, which is what led to holding them.</li>
     </ul>
   </div>
   <div class="card">
     <h3>Where it didn't</h3>
     <ul>
-      <li>On clean data it was a coin flip (0.54), so it doesn't set the tiers.</li>
+      <li>On clean data it scored 0.54 overall and 0.51 on the no-history group, a coin flip.</li>
       <li>On the first run it was fooled by a field that changes after someone unsubscribes.</li>
-      <li>The real limit is the data: most contacts have never been emailed from Brevo, so there's no behaviour to read.</li>
+      <li>It doesn't set any tier. Its score is kept in the CSV as a column.</li>
     </ul>
   </div>
 </div>
@@ -339,27 +388,29 @@ footer{margin-top:64px;font-size:13px;color:var(--muted);border-top:1px solid va
 </div>
 <div class="callout info"><b>Bottom line:</b> JEV is 5x to 40x cheaper than an LLM for reading a whole list, and fast enough to re-run after every fix. It just can't find signal that isn't there.</div>
 
-<h2>The send plan</h2>
+<h2>8. The send plan</h2>
 <p>We don't know Brevo's exact suspension line. What we do know: sends at 0.1% to 0.9% went fine, and sends at 2.5% to 4.9% got rejected. So aim for 1% or less per campaign.</p>
 <div class="card">
 <ol>
-  <li><b>Next two campaigns:</b> the 4,871 safe contacts, plus half of wave 1 each time. That should land around 1.2%.</li>
-  <li><b>Then wave 2:</b> add it in slices small enough to stay under 1%. The slices can grow as people stick around.</li>
-  <li><b>Give it three days:</b> at least three days between emails to the same person. The Labor Day warm-ups went out on 4, 5 and 7 Sept.</li>
-  <li><b>Stop rule:</b> over 1% on a send? Halve the next slice. Anyone who marks spam comes off right away.</li>
-  <li><b>Never mail</b> EXCLUDE, SUPPRESS or NEW-EXCLUDE, and don't build audiences from segments 24 to 30.</li>
+  <li><b>Next campaigns:</b> SEND (2,386) every time, plus SEND-SMALL (3,825) in batches of 1,000 or fewer.</li>
+  <li><b>HOLD (7,387):</b> one last-chance email in batches of about 2,000. Anyone who doesn't open within a week gets dropped.</li>
+  <li><b>Give it three days:</b> at least three days between emails to the same person.</li>
+  <li><b>Stop rule:</b> if a send goes over 1%, pause that tier for the next campaign. Anyone who marks spam comes off right away.</li>
+  <li><b>Don't mail HOLD-NO-HISTORY or SUPPRESS,</b> and don't build audiences from segments 24 to 30.</li>
+  <li><b>Chase the SendGrid export</b> (section 4). It's the only way to bring most of the held pool back safely.</li>
+  <li><b>Confirm consent</b> for the 8,727 emailed contacts who are WooCommerce buyers without opt-in.</li>
 </ol>
 </div>
 
 <details class="card small">
 <summary><b>Method notes</b></summary>
 <ul>
-  <li>Backtest: features as of 1 Aug 2026; label = unsubscribed or complained after that. 11,276 contacts, 629 unsubscribes.</li>
+  <li>Backtest: features as of 1 Aug 2026; label = unsubscribed or complained after that. 11,276 contacts, 629 unsubscribes. First-email analysis: 15,189 first Brevo emails since June, 542 unsubscribes.</li>
   <li>Hidden from the backtest because they change after someone unsubscribes: WooCommerce subscription status, lists #63 and #64, and live engagement segments.</li>
-  <li>Brevo keeps per-contact email history from June 2026 only, so "never mailed" means not mailed from Brevo since then.</li>
-  <li>Order data looks incomplete for many WooCommerce buyers without opt-in, so some repeat buyers may sit in EXCLUDE.</li>
-  <li>JEV: typesafe/jev-1.13-20260917 via OpenRouter, 100 contacts per call, 3 questions each.</li>
-  <li>The pull took about 2.5 hours through the API. Campaign recipient exports would cut that to minutes next time.</li>
+  <li>A signal only counted if it held in both halves of the data (first emails before and after 15 Aug). Orders, time on list and email provider held. Consent, Brevo churn score, RFM, SendGrid clicker and product lists flipped.</li>
+  <li>Brevo keeps per-contact email history from June 2026. The account has 279 campaigns before that, back to 2021, which we can't see per contact.</li>
+  <li>JEV: typesafe/jev-1.13-20260917 via OpenRouter, 100 contacts per call, 3 questions each. Two full runs, $4.62 in total.</li>
+  <li>The pull took about 2.5 hours through the API (153,608 per-contact calls). Campaign recipient exports would cut that to minutes next time.</li>
 </ul>
 </details>
 
